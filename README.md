@@ -67,10 +67,4 @@ curl -X POST localhost:3000/api/spots/1/reviews -H 'content-type: application/js
 curl -X POST localhost:3000/api/spots/1/photos -F photo=@desk.jpg -F caption="Window seats"
 ```
 
-## Next steps worth adding
 
-- **Auth** (NextAuth with your school's Google/Microsoft login) so ratings are tied to students, plus one-rating-per-hour limits.
-- **Rate limiting & moderation**: report button for photos/comments; image resizing with `sharp`.
-- **Hours & amenities**: opening hours, bookable rooms, food nearby, accessibility.
-- **Busy-by-hour chart** from historical ratings ("usually packed 11–2").
-- **Deploy**: Vercel + Neon/Supabase Postgres works with no code changes.
