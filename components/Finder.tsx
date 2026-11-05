@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import SpotMap from "./SpotMap";
 import { Meter } from "./Meter";
+import { OpenBadge } from "./SpotInfo";
 import type { SortKey, SpotSummary } from "@/lib/types";
 
 type Filters = {
@@ -12,10 +13,25 @@ type Filters = {
   minWifi: number;
   minOutlets: number;
   maxBusy: number;
+  openNow: boolean;
+  accessible: boolean;
+  bookable: boolean;
+  food: boolean;
   sort: SortKey;
 };
 
-const DEFAULTS: Filters = { q: "", maxNoise: 0, minWifi: 0, minOutlets: 0, maxBusy: 0, sort: "best" };
+const DEFAULTS: Filters = {
+  q: "", maxNoise: 0, minWifi: 0, minOutlets: 0, maxBusy: 0,
+  openNow: false, accessible: false, bookable: false, food: false, sort: "best",
+};
+
+// On/off filters shown as toggle chips.
+const TOGGLES: { key: "openNow" | "accessible" | "bookable" | "food"; label: string }[] = [
+  { key: "openNow", label: "Open now" },
+  { key: "accessible", label: "♿ Accessible" },
+  { key: "bookable", label: "📅 Bookable rooms" },
+  { key: "food", label: "☕ Food nearby" },
+];
 
 const QUICK: { label: string; patch: Partial<Filters> }[] = [
   { label: "Silent study", patch: { maxNoise: 2 } },
@@ -59,7 +75,7 @@ export default function Finder({ initial }: { initial: SpotSummary[] }) {
 
   const queryString = useMemo(() => {
     const p = new URLSearchParams();
-    for (const [k, v] of Object.entries(filters)) if (v) p.set(k, String(v));
+    for (const [k, v] of Object.entries(filters)) if (v) p.set(k, v === true ? "1" : String(v));
     return p.toString();
   }, [filters]);
 
@@ -111,6 +127,19 @@ export default function Finder({ initial }: { initial: SpotSummary[] }) {
             {QUICK.map((q) => (
               <button key={q.label} type="button" className="chip" onClick={() => set(q.patch)}>
                 {q.label}
+              </button>
+            ))}
+          </div>
+          <div className="chips">
+            {TOGGLES.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                className={`chip${filters[t.key] ? " is-on" : ""}`}
+                aria-pressed={filters[t.key]}
+                onClick={() => set({ [t.key]: !filters[t.key] })}
+              >
+                {t.label}
               </button>
             ))}
             {active && (
@@ -180,7 +209,10 @@ export default function Finder({ initial }: { initial: SpotSummary[] }) {
                   </div>
                 )}
                 <div className="spot-body">
-                  <h3>{s.name}</h3>
+                  <div className="title-row">
+                    <h3>{s.name}</h3>
+                    <OpenBadge open={s.open_now} />
+                  </div>
                   <p className="muted">
                     {s.building ?? "Campus"} · {s.review_count} rating{s.review_count === 1 ? "" : "s"}
                   </p>

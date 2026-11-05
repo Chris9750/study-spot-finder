@@ -14,7 +14,7 @@ export default function PhotoUpload({ spotId }: { spotId: number }) {
     e.preventDefault();
     const file = fileRef.current?.files?.[0];
     if (!file) return setError("Choose a photo first.");
-    if (file.size > 5 * 1024 * 1024) return setError("Photos must be under 5 MB.");
+    if (file.size > 12 * 1024 * 1024) return setError("Photos must be under 12 MB.");
 
     const fd = new FormData();
     fd.append("photo", file);
@@ -35,11 +35,12 @@ export default function PhotoUpload({ spotId }: { spotId: number }) {
   return (
     <form className="card form" onSubmit={submit}>
       <h2>Add a photo</h2>
-      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" />
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" />
       <label className="field">
         <span>Caption (optional)</span>
         <input maxLength={200} value={caption} onChange={(e) => setCaption(e.target.value)} />
       </label>
+      <p className="muted small">Photos are resized and location data is removed.</p>
       {error && <p className="error">{error}</p>}
       <button className="btn" disabled={busy}>
         {busy ? "Uploading…" : "Upload photo"}

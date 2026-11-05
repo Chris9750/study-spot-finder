@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import BusyChart from "@/components/BusyChart";
 import { Meter } from "@/components/Meter";
 import PhotoUpload from "@/components/PhotoUpload";
+import ReportButton from "@/components/ReportButton";
 import ReviewForm from "@/components/ReviewForm";
+import { Amenities, HoursTable, OpenBadge } from "@/components/SpotInfo";
 import SpotMap from "@/components/SpotMap";
+import { campusNow } from "@/lib/hours";
 import { timeAgo, word } from "@/lib/labels";
+import { currentUser } from "@/lib/session";
 import { getSpot } from "@/lib/spots";
 import { idParam } from "@/lib/validate";
 
@@ -12,9 +17,10 @@ export const dynamic = "force-dynamic";
 
 export default async function SpotPage({ params }: { params: Promise<{ id: string }> }) {
   const id = idParam((await params).id);
-  const data = id ? await getSpot(id) : null;
+  const [data, user] = await Promise.all([id ? getSpot(id) : null, currentUser()]);
   if (!data) notFound();
-  const { spot, reviews, photos } = data;
+  const { spot, reviews, photos, busyByHour } = data;
+  const signedIn = !!user;
 
   return (
     <div className="detail">
@@ -25,11 +31,19 @@ export default async function SpotPage({ params }: { params: Promise<{ id: strin
       <div className="detail-grid">
         <div className="detail-main">
           <header className="detail-head">
-            <h1>{spot.name}</h1>
+            <div className="title-row">
+              <h1>{spot.name}</h1>
+              <OpenBadge open={spot.open_now} />
+            </div>
             <p className="muted">
               {spot.building ?? "Campus"} · {spot.review_count} rating{spot.review_count === 1 ? "" : "s"}
+              {" · "}
+              <Link href={signedIn ? `/spots/${spot.id}/edit` : `/signin?next=/spots/${spot.id}/edit`}>
+                Edit details
+              </Link>
             </p>
             {spot.description && <p>{spot.description}</p>}
+            <Amenities spot={spot} />
           </header>
 
           <section className="card">
@@ -46,6 +60,8 @@ export default async function SpotPage({ params }: { params: Promise<{ id: strin
             )}
           </section>
 
+          <BusyChart buckets={busyByHour} nowHour={campusNow().hour} />
+
           <section>
             <h2>Photos</h2>
             {photos.length ? (
@@ -54,9 +70,18 @@ export default async function SpotPage({ params }: { params: Promise<{ id: strin
                   <figure key={p.id}>
                     <a href={`/api/photos/${p.id}`} target="_blank" rel="noreferrer">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`/api/photos/${p.id}`} alt={p.caption ?? spot.name} loading="lazy" />
+                      <img
+                        src={`/api/photos/${p.id}`}
+                        alt={p.caption ?? spot.name}
+                        width={p.width ?? undefined}
+                        height={p.height ?? undefined}
+                        loading="lazy"
+                      />
                     </a>
-                    {p.caption && <figcaption>{p.caption}</figcaption>}
+                    <figcaption>
+                      <span>{p.caption}</span>
+                      <ReportButton type="photo" id={p.id} signedIn={signedIn} />
+                    </figcaption>
                   </figure>
                 ))}
               </div>
@@ -72,8 +97,16 @@ export default async function SpotPage({ params }: { params: Promise<{ id: strin
                 {reviews.map((r) => (
                   <li key={r.id} className="review">
                     <div className="review-head">
-                      <strong>{r.author_name ?? "Anonymous"}</strong>
-                      <span className="muted small">{timeAgo(r.created_at)}</span>
+                      <strong>{r.author_name ?? "Student"}</strong>
+                      <span className="muted small">
+                        {timeAgo(String(r.created_at))}
+                        {r.comment && (
+                          <>
+                            {" · "}
+                            <ReportButton type="review" id={r.id} signedIn={signedIn} />
+                          </>
+                        )}
+                      </span>
                     </div>
                     <div className="tags">
                       <span className="tag">{word("noise", r.noise)}</span>
@@ -103,8 +136,12 @@ export default async function SpotPage({ params }: { params: Promise<{ id: strin
           >
             Walking directions
           </a>
-          <ReviewForm spotId={spot.id} />
-          <PhotoUpload spotId={spot.id} />
+          <section className="card">
+            <h2>Hours</h2>
+            <HoursTable hours={spot.hours} />
+          </section>
+          <ReviewForm spotId={spot.id} userName={user?.name ?? null} />
+          {signedIn && <PhotoUpload spotId={spot.id} />}
         </aside>
       </div>
     </div>
